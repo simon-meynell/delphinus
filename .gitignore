@@ -6,6 +6,7 @@ __pycache__/
 *.mp3
 delphinus_log.txt
 interests.py
+requirements_backup.txt
 =======
 # Byte-compiled / optimized / DLL files
 __pycache__/
