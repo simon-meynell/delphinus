@@ -84,26 +84,32 @@ def format_email(analysis: dict, summaries: list[dict]) -> str:
             if last_author and last_author != first_author
             else first_author
         )
+        # Use a table with bgcolor for Outlook compatibility (Outlook ignores CSS
+        # background/gradients on divs). Gmail still sees the CSS gradient.
         return f"""
         <tr><td style="padding: 0 0 20px 0;">
-            <div style="background: linear-gradient(135deg, #1a1a2e, #0f3460);
-                        border-radius:10px; padding:24px; color:white;">
-                <div style="font-size:11px; letter-spacing:2px; color:#a8c6e8;
-                            margin-bottom:10px;">TODAY'S MUST-SEE PAPER</div>
-                <a href="{url}" style="color:white; font-weight:700; font-size:17px;
-                           text-decoration:none; line-height:1.4; display:block;
-                           margin-bottom:10px;">
-                    {title}
-                </a>
-                <div style="color:#a8c6e8; font-size:12px; margin-bottom:12px;">
-                    {author_display}{group_badge}
-                </div>
-                <div style="color:#e8f4f8; font-size:14px; line-height:1.6;
-                            border-top:1px solid rgba(255,255,255,0.15);
-                            padding-top:12px;">
-                    {why}
-                </div>
-            </div>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   bgcolor="#1a1a2e"
+                   style="background: linear-gradient(135deg, #1a1a2e, #0f3460);
+                          border-radius:10px;">
+                <tr><td style="padding:24px; color:white;">
+                    <div style="font-size:11px; letter-spacing:2px; color:#a8c6e8;
+                                margin-bottom:10px;">TODAY'S MUST-SEE PAPER</div>
+                    <a href="{url}" style="color:white; font-weight:700; font-size:17px;
+                               text-decoration:none; line-height:1.4; display:block;
+                               margin-bottom:10px;">
+                        {title}
+                    </a>
+                    <div style="color:#a8c6e8; font-size:12px; margin-bottom:12px;">
+                        {author_display}{group_badge}
+                    </div>
+                    <div style="color:#e8f4f8; font-size:14px; line-height:1.6;
+                                border-top:1px solid rgba(255,255,255,0.15);
+                                padding-top:12px;">
+                        {why}
+                    </div>
+                </td></tr>
+            </table>
         </td></tr>
         """
 
@@ -253,7 +259,8 @@ def format_email(analysis: dict, summaries: list[dict]) -> str:
             {header_image_html}
 
             <!-- Header -->
-            <tr><td style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            <tr><td bgcolor="#1a1a2e"
+                    style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
                            padding:28px 40px;">
                 <h1 style="margin:0; color:white; font-size:26px; font-weight:700;
                            letter-spacing:-0.5px;">✦ Delphinus</h1>
