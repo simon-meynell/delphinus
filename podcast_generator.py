@@ -135,7 +135,9 @@ def generate_audio(script: list[dict], output_path: str):
         text = line["text"]
         voice = VOICES.get(speaker, "echo")
 
-        print(f"  [{i+1}/{len(script)}] {speaker}: {text[:60]}...")
+        # Encode preview as ASCII to avoid cp1252 errors on Windows consoles
+        preview = text[:60].encode("ascii", errors="replace").decode("ascii")
+        print(f"  [{i+1}/{len(script)}] {speaker}: {preview}...")
 
         response = tts_client.audio.speech.create(
             model="tts-1",
@@ -153,7 +155,7 @@ def generate_audio(script: list[dict], output_path: str):
             file_list.append(silence_long if next_speaker != speaker else silence_short)
 
     concat_list_path = os.path.join(tmp_dir, "concat.txt")
-    with open(concat_list_path, "w") as f:
+    with open(concat_list_path, "w", encoding="utf-8") as f:
         for path in file_list:
             f.write(f"file '{path}'\n")
 

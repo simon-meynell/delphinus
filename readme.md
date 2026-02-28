@@ -11,12 +11,12 @@ python main.py
 ```
 
 **Windows — automated scheduling:**
-Use Windows Task Scheduler to run automatically at 8:00 PM Sunday–Thursday, matching the arxiv posting schedule. Create a new task, set the trigger to a weekly schedule on Sun–Thu at 8:00 PM, and set the action to run `python main.py` with the project folder as the working directory.
+Use Windows Task Scheduler to run automatically at 8:00 PM Sunday–Friday. Create a new task, set the trigger to a weekly schedule on Sun–Fri at 8:00 PM, and set the action to run `python main.py` with the project folder as the working directory. Saturday and Sunday runs are also safe — the fetcher will return Friday's announcement batch as a catch-up digest.
 
 **Mac/Linux — automated scheduling:**
 Use a cron job. Run `crontab -e` and add:
 ```
-0 20 * * 0-4 cd /path/to/delphinus && python main.py
+0 20 * * 0-5 cd /path/to/delphinus && python main.py
 ```
 
 ---
@@ -27,7 +27,13 @@ Use a cron job. Run `crontab -e` and add:
 The entry point. Orchestrates the full pipeline in order: fetch → analyze → summarize PDFs → generate podcast → format → send.
 
 ### `arxiv_fetcher.py`
-Fetches recent papers from arxiv using the arxiv API. Defaults to papers from the last 1 day; automatically expands to 2 days if fewer than 15 papers are found. Returns a list of paper metadata including title, abstract, authors, and arxiv ID.
+Fetches recent papers from arxiv using the arxiv API. Uses arxiv's 2:00 PM Eastern submission cutoff schedule to determine the correct window of papers for each run:
+
+- **Monday** — fetches submissions from Friday 2PM through Monday 2PM, capturing the full weekend bundle
+- **Tuesday–Friday** — fetches submissions from the previous day 2PM through today 2PM
+- **Saturday/Sunday** — fetches Friday's batch only (Thursday 2PM through Friday 2PM); weekend submissions are excluded as they haven't been announced yet
+
+Papers submitted after today's cutoff are excluded, as they belong to tomorrow's announcement. The window is printed at runtime so you can verify what's being pulled. Returns a list of paper metadata including title, abstract, authors, and arxiv ID.
 
 ### `analyzer.py`
 Sends all paper abstracts to **Claude Haiku** for cost-efficient analysis. Returns a structured JSON response containing:
@@ -85,6 +91,8 @@ Set `PODCAST_ENABLED=true` to turn on podcast generation (requires `OPENAI_API_K
 `ARXIV_CATEGORIES` is a comma-separated list of arxiv category identifiers. See [arxiv.org/category_taxonomy](https://arxiv.org/category_taxonomy) for the full list.
 
 `ffmpeg` must be installed and on your PATH for podcast audio stitching.
+
+`pytz` must be installed for the submission window calculation: `pip install pytz`.
 
 ---
 

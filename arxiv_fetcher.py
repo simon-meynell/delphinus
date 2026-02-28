@@ -21,25 +21,23 @@ def get_submission_window():
 
     Mon       → Fri 2PM – Mon 2PM  (weekend bundle)
     Tue–Fri   → Previous day 2PM – today 2PM
-    Sat       → Thu 2PM – Fri 2PM  (Friday's announcement, for catch-up)
-    Sun       → Thu 2PM – Fri 2PM  (same)
+    Sat/Sun   → Thu 2PM – Fri 2PM  (Friday's announcement only; weekend submissions not yet announced)
     """
     ET = pytz.timezone("America/New_York")
     now_et = datetime.now(ET)
     cutoff_today = now_et.replace(hour=14, minute=0, second=0, microsecond=0)
     weekday = now_et.weekday()  # 0=Mon, 6=Sun
 
-    if weekday == 0:    # Monday — grab everything since Friday 2PM
-        days_back = 3
-    elif weekday == 5:  # Saturday — grab Friday's batch (Thu 2PM → Fri 2PM)
-        days_back = 2
-    elif weekday == 6:  # Sunday — same as Saturday
-        days_back = 3
-    else:               # Tue–Fri — grab since yesterday 2PM
-        days_back = 1
-
-    start = cutoff_today - timedelta(days=days_back)
-    end = cutoff_today  # exclude anything submitted after today's cutoff (tomorrow's batch)
+    if weekday == 0:         # Monday — grab everything since Friday 2PM
+        start = cutoff_today - timedelta(days=3)
+        end = cutoff_today
+    elif weekday in (5, 6):  # Weekend — grab Friday's batch only (Thu 2PM → Fri 2PM)
+        last_friday = cutoff_today - timedelta(days=weekday - 4)
+        start = last_friday - timedelta(days=1)  # Thursday 2PM
+        end = last_friday                         # Friday 2PM
+    else:                    # Tue–Fri — grab since yesterday 2PM
+        start = cutoff_today - timedelta(days=1)
+        end = cutoff_today
 
     return start.astimezone(timezone.utc), end.astimezone(timezone.utc)
 
