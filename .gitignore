@@ -4,7 +4,7 @@ venv/
 __pycache__/
 *.pyc
 *.mp3
-*.log
+delphinus_log.txt
 interests.py
 =======
 # Byte-compiled / optimized / DLL files
