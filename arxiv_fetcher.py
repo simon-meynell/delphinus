@@ -19,29 +19,32 @@ def get_submission_window():
     Return (start_utc, end_utc) covering the submissions that correspond to
     the most recent arxiv announcement batch, based on arxiv's 2PM ET cutoff schedule.
 
-    Mon       → Fri 2PM – Mon 2PM  (weekend bundle)
-    Tue–Fri   → Previous day 2PM – today 2PM
-    Sat/Sun   → Thu 2PM – Fri 2PM  (Friday's announcement only; weekend submissions not yet announced)
+    arXiv rule: papers submitted by 2PM ET on day X are announced on day X+1.
+    So "today's announcement" covers submissions from 2PM ET two days ago to 2PM ET yesterday.
+
+    Mon       → Fri 2PM – Mon 2PM  (weekend bundle announced Monday)
+    Tue–Fri   → 2 days ago 2PM – yesterday 2PM
+    Sat/Sun   → Wed 2PM – Thu 2PM  (Friday's announcement; no weekend announcements)
     """
     ET = pytz.timezone("America/New_York")
     now_et = datetime.now(ET)
     cutoff_today = now_et.replace(hour=14, minute=0, second=0, microsecond=0)
     weekday = now_et.weekday()  # 0=Mon, 6=Sun
 
-    if weekday == 0:         # Monday — grab everything since Friday 2PM
+    if weekday == 0:         # Monday — announced papers submitted Fri 2PM – Mon 2PM
         start = cutoff_today - timedelta(days=3)
         end = cutoff_today
-    elif weekday in (5, 6):  # Weekend — grab Friday's batch only (Thu 2PM → Fri 2PM)
+    elif weekday in (5, 6):  # Weekend — Friday's announcement: Wed 2PM → Thu 2PM
         last_friday = cutoff_today - timedelta(days=weekday - 4)
-        start = last_friday - timedelta(days=1)  # Thursday 2PM
-        end = last_friday                         # Friday 2PM
-    else:                    # Tue–Fri — grab since yesterday 2PM
-        start = cutoff_today - timedelta(days=1)
-        end = cutoff_today
+        start = last_friday - timedelta(days=2)  # Wednesday 2PM
+        end = last_friday - timedelta(days=1)    # Thursday 2PM
+    else:                    # Tue–Fri — announced papers submitted 2 days ago 2PM → yesterday 2PM
+        start = cutoff_today - timedelta(days=2)
+        end = cutoff_today - timedelta(days=1)
 
     return start.astimezone(timezone.utc), end.astimezone(timezone.utc)
 
-def fetch_recent_papers(categories=None, max_per_category=100):
+def fetch_recent_papers(categories=None):
     """
     Fetch recent new submissions from arxiv for the given categories.
     Categories default to ARXIV_CATEGORIES in .env, or quant-ph + cond-mat.mes-hall if not set.
@@ -51,20 +54,21 @@ def fetch_recent_papers(categories=None, max_per_category=100):
         categories = get_categories()
 
     start_utc, end_utc = get_submission_window()
-    print(f"  Submission window: {start_utc.strftime('%a %Y-%m-%d %H:%M UTC')} → {end_utc.strftime('%a %Y-%m-%d %H:%M UTC')}")
+    print(f"  Submission window: {start_utc.strftime('%a %Y-%m-%d %H:%M UTC')} -> {end_utc.strftime('%a %Y-%m-%d %H:%M UTC')}")
 
-    client = arxiv.Client()
+    client = arxiv.Client(page_size=200, num_retries=3)
     papers = []
     seen_ids = set()
 
     for category in categories:
         search = arxiv.Search(
             query=f"cat:{category}",
-            max_results=max_per_category,
+            max_results=2000,
             sort_by=arxiv.SortCriterion.SubmittedDate,
             sort_order=arxiv.SortOrder.Descending
         )
 
+        skipped = 0
         for result in client.results(search):
             paper_id = result.entry_id.split("/")[-1]
 
@@ -75,9 +79,11 @@ def fetch_recent_papers(categories=None, max_per_category=100):
             submitted = result.published.replace(tzinfo=timezone.utc)
 
             if submitted > end_utc:
-                continue  # submitted after today's cutoff — tomorrow's batch, skip
+                skipped += 1
+                continue  # submitted after cutoff — not yet announced, skip
 
             if submitted < start_utc:
+                print(f"  [{category}] Skipped {skipped} post-cutoff papers, found {len(papers)} in window.")
                 break  # older than our window — stop iterating
 
             papers.append({

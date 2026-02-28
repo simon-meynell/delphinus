@@ -27,13 +27,15 @@ Use a cron job. Run `crontab -e` and add:
 The entry point. Orchestrates the full pipeline in order: fetch → analyze → summarize PDFs → generate podcast → format → send.
 
 ### `arxiv_fetcher.py`
-Fetches recent papers from arxiv using the arxiv API. Uses arxiv's 2:00 PM Eastern submission cutoff schedule to determine the correct window of papers for each run:
+Fetches recent papers from arxiv using the arxiv API. Uses arxiv's 2:00 PM Eastern submission cutoff schedule to determine the correct window of papers for each run.
 
-- **Monday** — fetches submissions from Friday 2PM through Monday 2PM, capturing the full weekend bundle
-- **Tuesday–Friday** — fetches submissions from the previous day 2PM through today 2PM
-- **Saturday/Sunday** — fetches Friday's batch only (Thursday 2PM through Friday 2PM); weekend submissions are excluded as they haven't been announced yet
+arXiv's rule: papers submitted by 2PM ET on day X are announced on day X+1. So each day's announced papers were submitted in the 24-hour window ending at 2PM ET the previous day.
 
-Papers submitted after today's cutoff are excluded, as they belong to tomorrow's announcement. The window is printed at runtime so you can verify what's being pulled. Returns a list of paper metadata including title, abstract, authors, and arxiv ID.
+- **Monday** — fetches submissions from Friday 2PM through Monday 2PM, capturing the full weekend bundle announced on Monday
+- **Tuesday–Friday** — fetches submissions from two days ago 2PM through yesterday 2PM (i.e. the batch announced today)
+- **Saturday/Sunday** — fetches Wednesday 2PM through Thursday 2PM, which is Friday's announcement batch; weekend submissions are excluded as they haven't been announced yet
+
+The window is printed at runtime so you can verify what's being pulled. Returns a list of paper metadata including title, abstract, authors, and arxiv ID.
 
 ### `analyzer.py`
 Sends all paper abstracts to **Claude Haiku** for cost-efficient analysis. Returns a structured JSON response containing:
@@ -92,9 +94,6 @@ Set `PODCAST_ENABLED=true` to turn on podcast generation (requires `OPENAI_API_K
 
 `ffmpeg` must be installed and on your PATH for podcast audio stitching.
 
-`pytz` must be installed for the submission window calculation: `pip install pytz`.
-
----
 
 ## Dolphin rating guide
 
