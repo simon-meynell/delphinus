@@ -122,6 +122,9 @@ Rules:
 - doc_type "chaptered" → 30+ pages with clear named chapters or sections
 
 chapter_type values (assign one per TOC chapter, in order):
+  "skip"        — front/back matter that has no podcast value: abstract, dedication,
+                  acknowledgements, table of contents, list of figures, list of tables,
+                  list of abbreviations, declaration, bibliography, references, appendix
   "background"  — introduction, motivation, literature review, related work
   "methods"     — theory, methodology, experimental setup, technical framework
   "core"        — main results, contributions, findings, analysis, experiments
@@ -129,6 +132,7 @@ chapter_type values (assign one per TOC chapter, in order):
 
 chapter_types must have one entry per level-1 TOC chapter listed above (by index, 0-based).
 If doc_type is "paper", return an empty chapter_types list.
+Be aggressive about marking front/back matter as "skip" — when in doubt, skip it.
 
 Return only valid JSON, no markdown fences."""
 
@@ -167,7 +171,8 @@ def detect_structure(metadata: dict, toc_chapters: list, client) -> dict:
 
     result = json.loads(raw)
 
-    # Merge chapter_type annotations onto the PyMuPDF-derived chapter list
+    # Merge chapter_type annotations onto the PyMuPDF-derived chapter list,
+    # then drop anything Haiku marked as front/back matter.
     if result["doc_type"] == "chaptered" and toc_chapters:
         type_by_index = {
             entry["index"]: entry.get("chapter_type", "core")
@@ -175,7 +180,12 @@ def detect_structure(metadata: dict, toc_chapters: list, client) -> dict:
         }
         for i, ch in enumerate(toc_chapters):
             ch["chapter_type"] = type_by_index.get(i, "core")
-        result["chapters"] = toc_chapters
+
+        skipped = [ch["title"] for ch in toc_chapters if ch["chapter_type"] == "skip"]
+        if skipped:
+            print(f"  Skipping front/back matter: {', '.join(skipped)}")
+
+        result["chapters"] = [ch for ch in toc_chapters if ch["chapter_type"] != "skip"]
     elif result["doc_type"] == "paper":
         result["chapters"] = []
 
