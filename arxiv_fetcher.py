@@ -1,5 +1,6 @@
 import arxiv
 import os
+import time
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 import pytz
@@ -44,11 +45,12 @@ def get_submission_window():
 
     return start.astimezone(timezone.utc), end.astimezone(timezone.utc)
 
-def fetch_recent_papers(categories=None):
+def fetch_recent_papers(categories=None, max_retries=3, retry_delay=60):
     """
     Fetch recent new submissions from arxiv for the given categories.
     Categories default to ARXIV_CATEGORIES in .env, or quant-ph + cond-mat.mes-hall if not set.
     Uses arxiv's 2PM ET submission cutoff schedule to determine the correct window.
+    Retries up to max_retries times on HTTP errors (e.g. 429 rate limit, 503 unavailable).
     """
     if categories is None:
         categories = get_categories()
@@ -56,6 +58,19 @@ def fetch_recent_papers(categories=None):
     start_utc, end_utc = get_submission_window()
     print(f"  Submission window: {start_utc.strftime('%a %Y-%m-%d %H:%M UTC')} -> {end_utc.strftime('%a %Y-%m-%d %H:%M UTC')}")
 
+    for attempt in range(max_retries):
+        try:
+            return _fetch(categories, start_utc, end_utc)
+        except arxiv.HTTPError as e:
+            if attempt < max_retries - 1:
+                print(f"  arXiv API error ({e}), retrying in {retry_delay}s... (attempt {attempt + 1}/{max_retries})")
+                time.sleep(retry_delay)
+            else:
+                raise
+
+def _fetch(categories, start_utc, end_utc):
+    """Inner fetch logic, separated so the retry wrapper stays clean."""
+    # 500 is well above any realistic daily announcement volume (~150–250 for quant-ph)
     client = arxiv.Client(page_size=200, num_retries=3)
     papers = []
     seen_ids = set()
@@ -63,7 +78,7 @@ def fetch_recent_papers(categories=None):
     for category in categories:
         search = arxiv.Search(
             query=f"cat:{category}",
-            max_results=2000,
+            max_results=500,
             sort_by=arxiv.SortCriterion.SubmittedDate,
             sort_order=arxiv.SortOrder.Descending
         )

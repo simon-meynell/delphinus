@@ -1,4 +1,4 @@
-# ✦ Delphinus
+# Delphinus
 
 An automated daily arxiv digest delivered by email every evening. Fetches new papers from **quant-ph** and **cond-mat.mes-hall**, analyzes them against your research interests using Claude, generates deep-dive summaries from PDFs, produces a podcast episode about the must-see paper, and sends a formatted HTML email with the audio attached.
 
@@ -103,7 +103,6 @@ Set `PODCAST_ENABLED=true` to turn on podcast generation (requires `OPENAI_API_K
 | 🐬🐬 | You should probably look at this one |
 | 🐬🐬🐬 | YOWZA — you need to know about this paper |
 
-Not every day has a 🐬🐬🐬 paper, and that's okay.
 
 ---
 

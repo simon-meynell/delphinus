@@ -1,0 +1,118 @@
+[
+  {
+    "speaker": "NICO",
+    "text": "Okay, so unconditional teleported gates between remote NV centers. This is the Hanson group at Delft, and the paper is called Unconditionally Teleported Quantum Gates between Remote Solid-State Qubit Registers. This is a big deal because they actually got rid of post-selection entirely."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Wait, unconditional? With NV centers over an optical link? That sounds... optimistic. What's their definition of unconditional here?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "Right, so they're generating remote entanglement between two diamond chips separated by two meters of fiber, then doing a teleported C-NOT between carbon-thirteen nuclear spins. The unconditional part means once entanglement is heralded, they accept every single measurement outcome and do real-time feed-forward. No throwing away data where the readout looked weird or the phase drifted too much."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Okay, but heralded entanglement isn't deterministic. So they're still waiting for a photon click, right?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "Exactly. They set a timeout at fifty entanglement attempts, and if they don't get a click, they re-initialize and start over. But the key thing is, once they get that click, the rest of the protocol runs deterministically. They're getting about seventy-six percent fidelity on the remote Bell state, which honestly isn't bad given they're doing DC Stark tuning at high magnetic field."
+  },
+  {
+    "speaker": "VENA",
+    "text": "High field? How high are we talking?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "Alice is at one hundred eighty-nine millitesla, Bob is at thirty-one millitesla. So Alice is way past the level anticrossing. And here's the clever bit: they're using two completely different control schemes for the nuclear spins. Alice uses this DD-RF technique where they directly drive the carbon with RF pulses interleaved with dynamical decoupling on the electron. Bob just uses standard DD sequences. And they make both work during entanglement generation, which is non-trivial."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Hold on. Why would you make your life harder with two different control methods? That sounds like a nightmare to synchronize."
+  },
+  {
+    "speaker": "NICO",
+    "text": "That's actually the genius part! The DD-RF method at high field gives them way more flexibility in gate timing. They can tune the gate duration easily to match synchronization constraints from the other node. Plus, and this is critical, the phase tracking during entanglement attempts is much simpler. For Alice they just update the phase on the RF local oscillator. For Bob they have to compile a whole lookup table of dynamical decoupling sequences with tailored interpulse delays to rephase the nuclear spin based on how many entanglement attempts happened."
+  },
+  {
+    "speaker": "VENA",
+    "text": "So the nuclear spin is picking up phase during each entanglement attempt because the electron state is doing stochastic stuff during the reset pulse. How bad is the coherence hit?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "They characterize this really carefully. They get N-one-over-e of three hundred ninety-one attempts for Alice, four hundred seventy-nine for Bob. That's the number of attempts where the nuclear spin fidelity drops by one-over-e. So at fifty attempts, their timeout, they're still in pretty good shape. For us working with similar systems, this is directly relevant if you're trying to do anything with nuclear spin memories during active entanglement generation."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Okay, but let's talk about the actual gate. They claim sixty-three percent fidelity on a teleported C-NOT creating a psi-plus state. That's... not amazing. What's eating the fidelity?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "Yeah, so the main killers are the remote entanglement fidelity at seventy-six percent, initialization errors on the nuclear spins, and then the mid-circuit readout. And actually this is important: the electron spin readout has about five to nine percent wrong state assignment for the bright state. When that happens, you apply the wrong feed-forward operation on the nuclear spin, and everything goes to hell."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Five to nine percent readout error on the electron? That's rough. Are they doing single-shot readout?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "Yes, single-shot non-destructive readout using the phonon sideband. They actually do something smart: they use a long weak pulse with a dynamic stop when they detect a photon. But when they simulate the gate performance assuming perfect mid-circuit readout, the truth table fidelities jump to ninety percent and the entangled state fidelity goes to seventy-six percent. So there's a clear path to improvement."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Wait, they also make a four-qubit GHZ state across the two nodes. What's the fidelity there?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "Sixty-four percent, but it's above fifty percent so it proves genuine four-partite entanglement. And again, zero post-selection. Every single run is accepted. They're doing full tomography by measuring each communication qubit first, then using that outcome to condition the readout of the nuclear spin."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Okay, I'm still stuck on something. They talk about fully deterministic operation in the future. What's the metric there? Active link efficiency?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "Exactly! You need the coherence time under network activity to exceed the time to generate entanglement. Right now they're not there, hence the timeout. But they point to recent work on weakly coupled carbon-thirteens or decoherence-protected subspaces using pairs of nuclear spins that get orders of magnitude better coherence. Combine that with cavity-enhanced collection or better communication qubits, and you could actually get deterministic operation."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Alright, but here's my real objection. This is two meters of fiber in a lab. The paper mentions they previously did ten kilometers in deployed fiber, but this experiment isn't that. How much of this actually translates to real network distances?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "That's fair. The two-meter link here is about demonstrating the full protocol complexity, not distance. The DC Stark tuning, the real-time feed-forward, the phase tracking, all of that gets harder at long distance because your classical communication latency grows. But the core technique, the number-state encoding for entanglement generation, that's the same scheme they used for the ten-kilometer demonstration. The point is they've now shown they can layer multi-qubit control and quantum logic on top of that link."
+  },
+  {
+    "speaker": "VENA",
+    "text": "So if I'm working with, say, silicon vacancy centers or germanium vacancy centers, what's the takeaway? Is the DD-RF method portable?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "Absolutely. They actually mention this in the outlook. The DD-RF techniques developed here on NV are already being adopted for diamond group-four color centers. The key requirement is you need to be in a regime where your nuclear spin Larmor frequency is much larger than the perpendicular hyperfine coupling. High magnetic field helps with that. For us doing similar stuff, the phase tracking strategies they develop are probably the most directly useful part."
+  },
+  {
+    "speaker": "VENA",
+    "text": "What about the real-time control infrastructure? They're using a Zurich Instruments HDAWG and some microcontroller setup. Is that pretty standard or custom?"
+  },
+  {
+    "speaker": "NICO",
+    "text": "It's not too exotic. The HDAWG handles fast nanosecond-precision stuff, and then they have an ADwin for higher-level logic and classical communication between nodes. The lookup table for Bob's rephasing sequences lives on the HDAWG so it can be accessed in real time. For anyone building a similar setup, that's a reasonable architecture."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Okay, last thing. They get experimental rates of twenty-three to forty-two millihertz. That's pretty slow."
+  },
+  {
+    "speaker": "NICO",
+    "text": "Yeah, it's limited by the entanglement generation rate, which depends on photon collection efficiency and how often the charge state fluctuates. They're doing a charge-resonance check before every run, and they have to tune the DC voltage to keep the optical transitions on resonance. That adds overhead. But again, cavities would help a lot here."
+  },
+  {
+    "speaker": "VENA",
+    "text": "Alright, I'm actually pretty convinced this is solid work. The unconditional operation is real, even if the fidelities aren't stellar yet. And the fact that they're not hiding behind post-selection is genuinely valuable for the field."
+  },
+  {
+    "speaker": "NICO",
+    "text": "Right! And for anyone trying to build modular quantum architectures, this is a key capability. You need non-local gates that actually run without discarding half your data. The path to improvement is clear: better readout, better communication qubits, maybe some error correction on the nuclear spin registers. This is the kind of testbed where you can start exploring real network protocols."
+  }
+]

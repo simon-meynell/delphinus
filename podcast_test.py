@@ -6,6 +6,7 @@ Fetches a paper by arxiv ID, generates a dialogue script with Claude,
 and produces an MP3 using OpenAI TTS.
 
 Usage:
+    python podcast_test.py                                         # uses ARXIV_ID below
     python podcast_test.py 2501.12345                              # full run
     python podcast_test.py 2501.12345 --script-only                # generate script, skip TTS
     python podcast_test.py 2501.12345 --from-script script.json    # skip Claude, reuse existing script
@@ -25,6 +26,11 @@ import glob
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+# ─── Paste your arxiv ID here to run without terminal arguments ──────────────
+ARXIV_ID = "2601.04848"   # ← change this
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 # ─── PDF Fetching ────────────────────────────────────────────────────────────
@@ -77,6 +83,7 @@ They care about whether results are real, reproducible, and relevant to their ow
 Neither is explaining to a general audience; they're explaining to each other.
 
 IMPORTANT RULES:
+- Begin with a hook that tells the listener why the paper is noteworthy, following this short hook, make sure to state the group and paper title.
 - Write for audio. No bullet points. No "as shown in Figure 2". No equations in LaTeX.
   Spell out everything verbally: "the T two star time" not "T2*", "nanometers" not "nm".
 - Aim for ~1500 words total. This gives roughly 10 minutes at natural speaking pace.
@@ -87,6 +94,8 @@ IMPORTANT RULES:
   color centers / solid-state qubits), and one honest open question or limitation.
 - Do NOT pad with filler. Every exchange should move the conversation forward.
 - Start in media res — jump straight into the paper. No intro, no "welcome to the show".
+- IMPORTANT: If something wouldn't be common knowledge for an experimentalist studying color centers then it needs some degree of explanation.
+- Try to find examples of how it might relate to experiments for physicists studying color centers in a lab
 
 Format output as a JSON array:
 [
@@ -239,7 +248,7 @@ def generate_audio(script: list[dict], output_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a podcast episode from an arxiv paper.")
-    parser.add_argument("arxiv_id", help="Arxiv paper ID, e.g. 2501.12345")
+    parser.add_argument("arxiv_id", nargs="?", default=ARXIV_ID, help="Arxiv paper ID, e.g. 2501.12345")
     parser.add_argument("--script-only", action="store_true", help="Generate and print script, skip TTS")
     parser.add_argument("--from-script", default=None, metavar="PATH", help="Skip PDF fetch and Claude — load script from existing JSON file")
     parser.add_argument("--output", default=None, help="Output MP3 path (default: <arxiv_id>.mp3)")
