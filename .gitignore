@@ -2,6 +2,7 @@
 .env
 interests.py
 *.mp3
+*.json
 delphinus_log.txt
 requirements_backup.txt
 
