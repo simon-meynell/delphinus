@@ -1,8 +1,8 @@
 # Delphinus
 
-An automated daily arxiv digest and standalone PDF podcast tool for researchers.
+An automated arxiv digest and standalone PDF podcast tool for researchers.
 
-**Daily digest** — fetches new papers from **quant-ph** and **cond-mat.mes-hall**, analyzes them against your research interests using Claude, generates deep-dive summaries from PDFs, produces a ~10-minute podcast episode about the must-see paper, and sends a formatted HTML email with the audio attached.
+**Digest** — fetches all new papers from **quant-ph** and **cond-mat.mes-hall** since the last time it ran, analyzes them against your research interests using Claude, generates deep-dive summaries from PDFs, produces a ~10-minute podcast episode about the must-see paper, and sends a formatted HTML email with the audio attached.
 
 **PDF podcast** — standalone script that takes any local PDF (paper, thesis, textbook) and generates a podcast episode of configurable length summarizing it.
 
@@ -10,19 +10,29 @@ An automated daily arxiv digest and standalone PDF podcast tool for researchers.
 
 ## How to run
 
-### Daily digest
+### Digest
 
 ```bash
 python main.py
 ```
 
+Each run fetches all papers submitted since the last successful run (capped at 7 days back). After sending, the timestamp of the most recently submitted paper is saved to `last_fetch.json` — that becomes the start of the next run's window. The email header shows the exact range covered: *Papers between 18:00 March 19 2026 and 14:32 March 25 2026*.
+
+**Overriding the date range (testing / backfills):**
+```bash
+python main.py --from 2026-03-20T14:00:00 --to 2026-03-21T14:00:00
+python main.py --from 2026-03-20T14:00:00          # custom start, end = now
+python main.py --last-fetch-file my_state.json     # use a different state file
+```
+When `--from` or `--to` are used, `last_fetch.json` is **not** updated — the override is purely for that run.
+
 **Windows — automated scheduling:**
-Use Windows Task Scheduler to run automatically at 8:00 PM Sunday–Friday. Create a new task, set the trigger to a weekly schedule on Sun–Fri at 8:00 PM, and set the action to run `python main.py` with the project folder as the working directory. Saturday and Sunday runs are also safe — the fetcher will return Friday's announcement batch as a catch-up digest.
+Use Windows Task Scheduler to run on whatever cadence suits you (daily or a few times a week). Create a new task and set the action to run `python main.py` with the project folder as the working directory. Missed days are handled automatically — the next run will catch up on everything since the last successful one, up to 7 days back.
 
 **Mac/Linux — automated scheduling:**
 Use a cron job. Run `crontab -e` and add:
 ```
-0 20 * * 0-5 cd /path/to/delphinus && python main.py
+0 20 * * * cd /path/to/delphinus && python main.py
 ```
 
 ### PDF podcast
@@ -42,21 +52,21 @@ The PDF path is never committed to git — pass it as a CLI argument, or store i
 
 ## File overview
 
-### Daily digest pipeline
+### Digest pipeline
 
 #### `main.py`
 The entry point. Orchestrates the full pipeline in order: fetch → analyze → summarize PDFs → generate podcast → format → send.
 
+Accepts optional CLI flags to override the fetch window (`--from`, `--to`) and the state file path (`--last-fetch-file`). Exits early with a log entry if the arXiv API returns no papers for the window.
+
+After a successful send, saves the submission date of the newest paper seen to `last_fetch.json` (not the clock time of the run). This means the next run always picks up exactly where the last one left off, with no risk of missing a paper that was submitted before the previous run but hadn't yet appeared in the API.
+
 #### `arxiv_fetcher.py`
-Fetches recent papers from arxiv using the arxiv API. Uses arxiv's 2:00 PM Eastern submission cutoff schedule to determine the correct window of papers for each run.
+Fetches papers from the arXiv API for the configured categories, filtered to the time window determined by `last_fetch.json`.
 
-arXiv's rule: papers submitted by 2PM ET on day X are announced on day X+1. So each day's announced papers were submitted in the 24-hour window ending at 2PM ET the previous day.
+The window start is read from `last_fetch.json` (the max submission date from the previous run). If no file exists, or the saved date is older than `MAX_LOOKBACK_DAYS` (7 days), the start falls back to 7 days ago. The end is always now (or a `--to` override). Pass `--from`/`--to` on the command line to override either end for testing or backfills.
 
-- **Monday** — fetches submissions from Friday 2PM through Monday 2PM, capturing the full weekend bundle announced on Monday
-- **Tuesday–Friday** — fetches submissions from two days ago 2PM through yesterday 2PM (i.e. the batch announced today)
-- **Saturday/Sunday** — fetches Wednesday 2PM through Thursday 2PM, which is Friday's announcement batch; weekend submissions are excluded as they haven't been announced yet
-
-The window is printed at runtime so you can verify what's being pulled. Returns a list of paper metadata including title, abstract, authors, and arxiv ID.
+The window is printed at runtime so you can verify what's being pulled. Returns a list of paper metadata including title, abstract, authors, submission date, and arxiv ID.
 
 #### `analyzer.py`
 Sends all paper abstracts to **Claude Haiku** for cost-efficient analysis. Returns a structured JSON response containing:
@@ -84,6 +94,9 @@ Builds the HTML email from the analysis and PDF summaries. Sections in order: Mu
 #### `email_sender.py`
 Sends the formatted HTML email via Gmail SMTP. Reads credentials from the `.env` file. Supports multiple recipients as a comma-separated list in `EMAIL_TO`. Attaches the podcast MP3 if one was generated.
 
+#### `last_fetch.json`
+State file written after each successful run. Contains a single key, `last_fetch_utc`, set to the submission date of the most recently seen paper. The next run reads this as its window start. You can edit it by hand to re-run a range, or delete it to fall back to a 7-day lookback. Not committed to git.
+
 #### `interests.py`
 Your personal configuration file. Edit this to tune what Delphinus pays attention to:
 - `CORE_RESEARCH` — topics Claude scores and rates with dolphins
@@ -104,7 +117,7 @@ Short documents (< 30 pages or no chapter structure) get a single-pass script. L
 2. **Chapter summaries** (Haiku, parallel) — fast 2–3 paragraph summary of every chapter
 3. **Chapter scripts** (Sonnet, sequential) — each chapter gets a dialogue segment; crucially, every chapter sees the summaries of all other chapters so the hosts can make cross-references naturally. Earlier chapters use Haiku summaries of future chapters for context; later chapters use Sonnet-refined summaries of past ones
 4. **Intro segment** (Sonnet, last) — generated after all chapter scripts so it can draw on the fully refined summaries to set up the episode
-5. **Audio** — same OpenAI TTS + ffmpeg pipeline as the daily podcast
+5. **Audio** — same OpenAI TTS + ffmpeg pipeline as the digest podcast
 
 Podcast length is configurable via `--minutes`. Defaults to ~1 minute per 8 pages (15–60 min range). Core contribution chapters get ~2× the time of background or methods chapters. The presenter/questioner roles are randomly assigned each run (or forced with `--presenter`).
 
@@ -137,7 +150,7 @@ ARXIV_CATEGORIES=quant-ph,cond-mat.mes-hall
 
 Gmail requires an **App Password** (not your regular password). Enable it at myaccount.google.com/apppasswords — requires 2FA to be turned on.
 
-Set `PODCAST_ENABLED=true` to turn on podcast generation for the daily digest (requires `OPENAI_API_KEY` and `ffmpeg`).
+Set `PODCAST_ENABLED=true` to turn on podcast generation for the digest (requires `OPENAI_API_KEY` and `ffmpeg`).
 
 `ARXIV_CATEGORIES` is a comma-separated list of arxiv category identifiers. See [arxiv.org/category_taxonomy](https://arxiv.org/category_taxonomy) for the full list.
 
@@ -158,10 +171,9 @@ Set `PODCAST_ENABLED=true` to turn on podcast generation for the daily digest (r
 
 ## Approximate cost
 
-**Daily digest**
-~$0.10 per run (Haiku for abstract analysis, Sonnet for 3 PDF deep-dives).
+**Digest**
+~$0.10 per run for a typical day's batch (Haiku for abstract analysis, Sonnet for 3 PDF deep-dives). A weekly catch-up run with several days of papers costs more in Haiku tokens but the PDF deep-dives are still fixed at 3 papers.
 ~$0.15–0.25 additional per run with podcast enabled (Sonnet script + OpenAI TTS).
-~$6–10/month for daily runs with podcast enabled.
 
 **PDF podcast (`pdf_podcast.py`)**
 Varies with document length. Rough guide for a 10-chapter, 200-page thesis at 25 minutes:
@@ -170,4 +182,4 @@ Varies with document length. Rough guide for a 10-chapter, 200-page thesis at 25
 - OpenAI TTS (~25 min audio): ~$0.70–1.00
 - **Total: ~$2–4 per thesis**
 
-Short papers are much cheaper — similar to a single daily digest run.
+Short papers are much cheaper — similar to a single digest run.

@@ -1,4 +1,5 @@
 import arxiv
+import json
 import os
 import time
 from datetime import datetime, timezone, timedelta
@@ -8,6 +9,7 @@ import pytz
 load_dotenv()
 
 DEFAULT_CATEGORIES = ["quant-ph", "cond-mat.mes-hall"]
+MAX_LOOKBACK_DAYS = 7
 
 def get_categories() -> list[str]:
     raw = os.getenv("ARXIV_CATEGORIES", "")
@@ -15,52 +17,62 @@ def get_categories() -> list[str]:
         return [c.strip() for c in raw.split(",") if c.strip()]
     return DEFAULT_CATEGORIES
 
-def get_submission_window():
+def get_window(last_fetch_path="last_fetch.json", start_override=None, end_override=None):
     """
-    Return (start_utc, end_utc) covering the submissions that correspond to
-    the most recent arxiv announcement batch, based on arxiv's 2PM ET cutoff schedule.
+    Return (start_utc, end_utc) for the fetch window.
 
-    arXiv rule: papers submitted by 2PM ET on day X are announced on day X+1.
-    So "today's announcement" covers submissions from 2PM ET two days ago to 2PM ET yesterday.
-
-    Mon       → Fri 2PM – Mon 2PM  (weekend bundle announced Monday)
-    Tue–Fri   → 2 days ago 2PM – yesterday 2PM
-    Sat/Sun   → Wed 2PM – Thu 2PM  (Friday's announcement; no weekend announcements)
+    If start_override and end_override are provided, use them directly.
+    Otherwise, read the last successful fetch timestamp from last_fetch_path.
+    If no file exists or the saved timestamp is older than MAX_LOOKBACK_DAYS, fall back to
+    (now - MAX_LOOKBACK_DAYS). end is always now.
     """
-    ET = pytz.timezone("America/New_York")
-    now_et = datetime.now(ET)
-    cutoff_today = now_et.replace(hour=14, minute=0, second=0, microsecond=0)
-    weekday = now_et.weekday()  # 0=Mon, 6=Sun
+    now_utc = datetime.now(timezone.utc)
 
-    if weekday == 0:         # Monday — announced papers submitted Fri 2PM – Mon 2PM
-        start = cutoff_today - timedelta(days=3)
-        end = cutoff_today
-    elif weekday in (5, 6):  # Weekend — Friday's announcement: Wed 2PM → Thu 2PM
-        last_friday = cutoff_today - timedelta(days=weekday - 4)
-        start = last_friday - timedelta(days=2)  # Wednesday 2PM
-        end = last_friday - timedelta(days=1)    # Thursday 2PM
-    else:                    # Tue–Fri — announced papers submitted 2 days ago 2PM → yesterday 2PM
-        start = cutoff_today - timedelta(days=2)
-        end = cutoff_today - timedelta(days=1)
+    if start_override is not None and end_override is not None:
+        return start_override, end_override
 
-    return start.astimezone(timezone.utc), end.astimezone(timezone.utc)
+    end_utc = end_override if end_override is not None else now_utc
+    fallback_start = now_utc - timedelta(days=MAX_LOOKBACK_DAYS)
 
-def fetch_recent_papers(categories=None, max_retries=3, retry_delay=60):
+    if start_override is not None:
+        return start_override, end_utc
+
+    # Try to read saved last-fetch timestamp
+    try:
+        with open(last_fetch_path) as f:
+            data = json.load(f)
+        saved = datetime.fromisoformat(data["last_fetch_utc"])
+        if saved.tzinfo is None:
+            saved = saved.replace(tzinfo=timezone.utc)
+        # Don't go back more than MAX_LOOKBACK_DAYS
+        start_utc = max(saved, fallback_start)
+    except (FileNotFoundError, KeyError, ValueError):
+        start_utc = fallback_start
+
+    return start_utc, end_utc
+
+def fetch_recent_papers(categories=None, start_utc=None, end_utc=None,
+                        last_fetch_path="last_fetch.json", max_retries=3, retry_delay=60):
     """
-    Fetch recent new submissions from arxiv for the given categories.
+    Fetch new submissions from arxiv for the given categories.
     Categories default to ARXIV_CATEGORIES in .env, or quant-ph + cond-mat.mes-hall if not set.
-    Uses arxiv's 2PM ET submission cutoff schedule to determine the correct window.
+
+    The time window is determined by last_fetch_path (the timestamp of the last successful run).
+    Pass start_utc/end_utc directly to override the window (useful for testing or backfills).
+
+    Returns (papers, start_utc, end_utc).
     Retries up to max_retries times on HTTP errors (e.g. 429 rate limit, 503 unavailable).
     """
     if categories is None:
         categories = get_categories()
 
-    start_utc, end_utc = get_submission_window()
-    print(f"  Submission window: {start_utc.strftime('%a %Y-%m-%d %H:%M UTC')} -> {end_utc.strftime('%a %Y-%m-%d %H:%M UTC')}")
+    start_utc, end_utc = get_window(last_fetch_path, start_override=start_utc, end_override=end_utc)
+    print(f"  Fetch window: {start_utc.strftime('%a %Y-%m-%d %H:%M UTC')} -> {end_utc.strftime('%a %Y-%m-%d %H:%M UTC')}")
 
     for attempt in range(max_retries):
         try:
-            return _fetch(categories, start_utc, end_utc)
+            papers = _fetch(categories, start_utc, end_utc)
+            return papers, start_utc, end_utc
         except arxiv.HTTPError as e:
             if attempt < max_retries - 1:
                 print(f"  arXiv API error ({e}), retrying in {retry_delay}s... (attempt {attempt + 1}/{max_retries})")
@@ -117,8 +129,8 @@ def _fetch(categories, start_utc, end_utc):
 
 
 if __name__ == "__main__":
-    papers = fetch_recent_papers()
-    print(f"Found {len(papers)} papers today\n")
+    papers, start, end = fetch_recent_papers()
+    print(f"Found {len(papers)} papers\n")
     for p in papers[:5]:
         print(f"- {p['title']}")
         print(f"  {p['first_author']} ... {p['last_author']}")

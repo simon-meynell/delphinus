@@ -1,4 +1,4 @@
-def format_email(analysis: dict, summaries: list[dict]) -> str:
+def format_email(analysis: dict, summaries: list[dict], start_utc=None, end_utc=None) -> str:
 
     image_url = "https://i.imgur.com/caqEJI3.jpeg"
     header_image_html = f"""
@@ -194,8 +194,16 @@ def format_email(analysis: dict, summaries: list[dict]) -> str:
         </td></tr>
         """
 
+    import pytz
     from datetime import datetime
-    today = datetime.now().strftime("%A, %B %d %Y")
+    ET = pytz.timezone("America/New_York")
+    if start_utc is not None and end_utc is not None:
+        def _fmt(dt):
+            dt_et = dt.astimezone(ET)
+            return f"{dt_et.strftime('%H:%M')} {dt_et.strftime('%B')} {dt_et.day} {dt_et.strftime('%Y')}"
+        today = f"Papers between {_fmt(start_utc)} and {_fmt(end_utc)}"
+    else:
+        today = datetime.now().strftime("%A, %B %d %Y")
 
     core_lookup = {p.get("id", ""): p for p in analysis.get("core_papers", [])}
     must_see = analysis.get("must_see", {})
