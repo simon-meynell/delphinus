@@ -6,6 +6,8 @@ import random
 import anthropic
 from dotenv import load_dotenv
 
+from claude_utils import ask_sonnet
+
 load_dotenv()
 
 # ─── Voices ──────────────────────────────────────────────────────────────────
@@ -97,13 +99,7 @@ def generate_script(pdf_text: str) -> list[dict]:
 
     prompt = SCRIPT_PROMPT.format(pdf_text=pdf_text, role_block=role_block)
 
-    response = client.messages.create(
-        model="claude-sonnet-4-5",
-        max_tokens=4000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    raw = response.content[0].text.strip()
+    raw = ask_sonnet(client, prompt)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):

@@ -104,6 +104,9 @@ Your personal configuration file. Edit this to tune what Delphinus pays attentio
 - `QUIRKY_INTERESTS` — what counts as weird and wonderful
 - `IMPORTANT_GROUPS` — research groups whose papers get a badge if the PI is a listed author
 
+#### `claude_utils.py`
+The one place Claude model names and settings live. Haiku 4.5 handles triage and quick summaries; Sonnet 5.5 (at `low` effort) writes the PDF deep-dives and podcast scripts. To upgrade a model later, change the name here. Also provides `ask_sonnet()` and `response_text()`, which every Claude call goes through.
+
 ---
 
 ### Standalone tools
@@ -183,3 +186,5 @@ Varies with document length. Rough guide for a 10-chapter, 200-page thesis at 25
 - **Total: ~$2–4 per thesis**
 
 Short papers are much cheaper — similar to a single digest run.
+
+These estimates were measured on Sonnet 4.5/4.6. Sonnet 5.5 is cheaper per token ($2/$10 vs $3/$15 per million) but counts about 30% more tokens for the same text, so the totals should come out about the same or slightly lower. Raising `SONNET_EFFORT` in `claude_utils.py` above `low` adds thinking tokens and pushes the cost up.

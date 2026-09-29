@@ -40,13 +40,9 @@ from document_processor import (
     SUBCHUNK_THRESHOLD,
 )
 from podcast_generator import generate_audio  # reuse existing TTS + ffmpeg pipeline
+from claude_utils import HAIKU_MODEL, ask_sonnet, response_text  # model names live here
 
 load_dotenv()
-
-# ─── Models ───────────────────────────────────────────────────────────────────
-
-HAIKU_MODEL  = "claude-haiku-4-5-20251001"
-SONNET_MODEL = "claude-sonnet-4-6"
 
 WORDS_PER_MINUTE = 130
 INTRO_MINUTES    = 2.0
@@ -162,7 +158,7 @@ def detect_structure(metadata: dict, toc_chapters: list, client) -> dict:
         messages=[{"role": "user", "content": prompt}],
     )
 
-    raw = response.content[0].text.strip()
+    raw = response_text(response)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -221,7 +217,7 @@ def _haiku_summary(chapter_text: str, chapter_title: str, doc_title: str, client
         max_tokens=800,
         messages=[{"role": "user", "content": prompt}],
     )
-    return response.content[0].text.strip()
+    return response_text(response)
 
 
 def generate_haiku_summaries(
@@ -347,13 +343,7 @@ def generate_chapter_segment(
         start_instruction=start_instruction,
     )
 
-    response = client.messages.create(
-        model=SONNET_MODEL,
-        max_tokens=6000,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    raw = response.content[0].text.strip()
+    raw = ask_sonnet(client, prompt)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -417,13 +407,7 @@ def generate_intro_segment(
         all_summaries=all_summaries,
     )
 
-    response = client.messages.create(
-        model=SONNET_MODEL,
-        max_tokens=3000,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    raw = response.content[0].text.strip()
+    raw = ask_sonnet(client, prompt)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -478,13 +462,7 @@ def generate_paper_script(
         doc_text=doc_text[:20_000],
     )
 
-    response = client.messages.create(
-        model=SONNET_MODEL,
-        max_tokens=5000,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    raw = response.content[0].text.strip()
+    raw = ask_sonnet(client, prompt)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):

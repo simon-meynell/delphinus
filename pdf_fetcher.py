@@ -5,6 +5,8 @@ import os
 import tempfile
 from dotenv import load_dotenv
 
+from claude_utils import ask_sonnet
+
 load_dotenv()
 
 def fetch_pdf_text(arxiv_id: str) -> str:
@@ -97,13 +99,7 @@ Return as JSON with this exact structure:
 Return only valid JSON, no markdown formatting.
 """
 
-    response = client.messages.create(
-        model="claude-sonnet-4-5",
-        max_tokens=3000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    
-    raw = response.content[0].text.strip()
+    raw = ask_sonnet(client, prompt)
     
     if raw.startswith("```"):
         raw = raw.split("```")[1]

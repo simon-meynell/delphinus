@@ -1,6 +1,7 @@
 import anthropic
 import json
 from dotenv import load_dotenv
+from claude_utils import HAIKU_MODEL, response_text
 from interests import CORE_RESEARCH, FOUNDATIONS_INTERESTS, QUIRKY_INTERESTS, IMPORTANT_GROUPS
 
 load_dotenv()
@@ -113,12 +114,12 @@ Return only valid JSON, no markdown formatting, no extra text.
 """
 
     response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=HAIKU_MODEL,
         max_tokens=15000,
         messages=[{"role": "user", "content": prompt}]
     )
 
-    raw = response.content[0].text.strip()
+    raw = response_text(response)
 
     if raw.startswith("```"):
         raw = raw.split("```")[1]
