@@ -41,7 +41,15 @@ IMPORTANT RULES:
   color centers / solid-state qubits), and one honest open question or limitation.
 - Do NOT pad with filler. Every exchange should move the conversation forward.
 - Start in media res — jump straight into the paper. No intro, no "welcome to the show".
-- IMPORTANT: If something wouldn't be common knowledge for an experimentalist studying color centers then it needs some degree of explanation.
+- CONCEPT CALIBRATION: Assume the listener has a solid experimental quantum physics background
+  — PhD-level, working in solid-state or atomic systems. They don't need things explained just 
+  because they're technical. The bar for adding a gloss is: how central is this concept to the 
+  paper's core argument, AND how likely is a solid-state experimentalist to already know it? 
+  A concept that's peripheral doesn't need explaining even if obscure. A concept that's 
+  well-known doesn't need explaining even if central. Only when something is both essential to 
+  following the argument AND genuinely outside the typical solid-state experimentalist's 
+  day-to-day vocabulary should the expert host work in a brief, natural one-sentence gloss — 
+  not as a formal definition, just enough to keep the listener with you.
 - Try to find examples of how it might relate to experiments for physicists studying color centers in a lab
 
 Format output as a JSON array:

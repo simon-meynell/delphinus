@@ -48,7 +48,7 @@ def run():
     print(f"Found {len(papers)} papers.\n")
 
     if not papers:
-        msg = f"No papers found in window {start_utc.isoformat()} → {end_utc.isoformat()}. Aborting."
+        msg = f"No papers found in window {start_utc.isoformat()} -> {end_utc.isoformat()}. Aborting."
         print(msg)
         with open("delphinus_log.txt", "a") as log:
             log.write(f"[{datetime.now(timezone.utc).isoformat()}] {msg}\n")
@@ -92,7 +92,7 @@ def run():
         else:
             last_seen = end_utc
         save_last_fetch(args.last_fetch_file, last_seen)
-        print(f"Updated {args.last_fetch_file} → {last_seen.isoformat()}")
+        print(f"Updated {args.last_fetch_file} -> {last_seen.isoformat()}")
 
     print("\nDone!")
 
