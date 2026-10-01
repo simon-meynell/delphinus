@@ -1,10 +1,32 @@
 import anthropic
 import json
+import re
 from dotenv import load_dotenv
 from claude_utils import HAIKU_MODEL, response_text
 from interests import CORE_RESEARCH, FOUNDATIONS_INTERESTS, QUIRKY_INTERESTS, IMPORTANT_GROUPS
 
 load_dotenv()
+
+def _match_ids_to_papers(result: dict, papers: list[dict]) -> None:
+    """
+    Haiku sometimes drops the version suffix ("2609.39735" for "2609.39735v1"),
+    and later steps look papers up by exact ID, so rewrite every ID in the
+    result to the form arxiv_fetcher returned.
+    """
+    def base(arxiv_id):
+        return re.sub(r"v\d+$", "", str(arxiv_id).strip())
+
+    by_base = {base(p["id"]): p["id"] for p in papers}
+
+    def fix(arxiv_id):
+        return by_base.get(base(arxiv_id), arxiv_id)
+
+    if result.get("must_see"):
+        result["must_see"]["id"] = fix(result["must_see"].get("id", ""))
+    result["top_3_ids"] = [fix(i) for i in result.get("top_3_ids", [])]
+    for section in ("core_papers", "foundations_papers", "quirky_papers"):
+        for p in result.get(section, []):
+            p["id"] = fix(p.get("id", ""))
 
 def analyze_papers(papers: list[dict]) -> dict:
     client = anthropic.Anthropic()
@@ -127,7 +149,9 @@ Return only valid JSON, no markdown formatting, no extra text.
             raw = raw[4:]
         raw = raw.strip()
 
-    return json.loads(raw)
+    result = json.loads(raw)
+    _match_ids_to_papers(result, papers)
+    return result
 
 
 if __name__ == "__main__":
