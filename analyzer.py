@@ -67,6 +67,11 @@ Today's papers:
 
 RULES:
 
+WRITING STYLE: The "why" and "relevance" text is read by the researcher in an email. Never mention the
+structure of these instructions — no "Core Area B", "Area A", "core interests", "important group list" etc.
+Describe the physics and why it matters directly (e.g. "proves arbitrarily large metrology advantages
+from indefinite causal order", not "Core Area B result: ...").
+
 GROUP MATCHING: Only assign a group affiliation if you are highly confident a known PI from the IMPORTANT GROUPS list is an actual listed author. Do NOT assign a group based on institution alone. If uncertain, leave group as empty string. Wrong is worse than blank.
 
 DOLPHIN RATING SYSTEM for core_papers:
